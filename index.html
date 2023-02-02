@@ -3,46 +3,138 @@
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ajaxy/1.6.1/scripts/jquery.ajaxy.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">   
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+      crossorigin=""
+    />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+      crossorigin=""
+    ></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.js"></script>
-    <style>
-     
-    </style>
+    <style></style>
   </head>
   <body>
-    <div class="h-100 d-flex align-items-center" style="border: 2px solid green;">
-      <div class="container text-center" >
-        <div id="map" style="height: 99vh; width: 100%;"></div>
+    <div class="h-100 d-flex align-items-center">
+      <div class="container text-center">
+        <h2>World Map</h2>
+        <div
+          id="map"
+          style="height: 93vh; width: 100%; border: 2px solid green"
+        ></div>
       </div>
-    </div> 
+    </div>
+    <div class="class"></div>
     <script>
-      var map = L.map('map').setView([53.70757133392822, -11.2152313682426], 2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
+      var currentUrl = window.location.href;
+      var geojson;
+      var info = L.control();
+      var map = L.map("map").setView([43.70757133392822, -12.2152313682426], 2);
+      L.tileLayer(currentUrl + "black.jfif", {}).addTo(map);
 
-$.ajax({
-    dataType: "json",
-    url: "worldBounds.geojson",
-    success: function(data) {
-      
- console.log(data);
-            L.geoJson(data, {
-              onEachFeature: function (f, l) {
-   l.bindPopup('<pre>'+JSON.stringify(f.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
- }
-            }).addTo(map);
-    }
- }).error(function() {});
+      info.onAdd = function (map) {
+        this._div = L.DomUtil.create("div", "info"); // create a div with a class "info"
+        this.update();
+        return this._div;
+      };
 
+      // method that we will use to update the control based on feature properties passed
+      info.update = function (props) {
+        this._div.innerHTML = props
+          ? "<h4>" +
+            props.name +
+            "</h4>" +
+            "Visit Date: <b>" +
+            props.date +
+            "</b><br /> Picture Link" +
+            props.pictureLink +
+            props.pictureLink
+          : "";
+      };
 
-function onEachFeature(feature, layer) {
-   var popupContent = "<p>Hello world</p>";
+      info.addTo(map);
 
-   layer.bindPopup(popupContent);
-}
+      function style(feature) {
+        return {
+          fillColor: "green",
+          weight: 2,
+          opacity: 1,
+          color: "white",
+          dashArray: "3",
+          fillOpacity: 0.2,
+        };
+      }
+      function highlightFeature(e) {
+        var layer = e.target;
+        layer.setStyle({
+          weight: 5,
+          color: "#666",
+          dashArray: "",
+          fillOpacity: 0.7,
+        });
+
+        layer.bringToFront();
+      }
+      function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+      }
+      function zoomToFeature(e) {
+        info.update(e.sourceTarget.feature.properties);
+        map.fitBounds(e.target.getBounds());
+      }
+      $.ajax({
+        dataType: "json",
+        url: "worldBounds.geojson",
+        success: function (data) {
+          geojson = L.geoJson(data, {
+            style: style,
+            onEachFeature: function (f, l) {
+              l.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: zoomToFeature,
+              });
+              // l.bindPopup(
+              //   "<pre>" +
+              //     JSON.stringify(f.properties, null, " ").replace(
+              //       /[\{\}"]/g,
+              //       ""
+              //     ) +
+              //     "</pre>"
+              // );
+            },
+          }).addTo(map);
+        },
+      }).error(function () {});
+
+      function onEachFeature(feature, layer) {
+        var popupContent = "<p>Hello world</p>";
+
+        layer.bindPopup(popupContent);
+      }
     </script>
   </body>
+  <style>
+    .info {
+      padding: 6px 8px;
+      font: 14px/16px Arial, Helvetica, sans-serif;
+      background: white;
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+    }
+    .info h4 {
+      margin: 0 0 5px;
+      color: #777;
+    }
+  </style>
 </html>
